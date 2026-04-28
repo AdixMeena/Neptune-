@@ -3,41 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom'
 import PatientApprovalGate from '../../components/PatientApprovalGate.jsx'
 import { supabase } from '../../lib/supabase.js'
 
-// Simulated skeleton keypoints
-const JOINTS = [
-  { id: 'head', x: 50, y: 12, connected: ['neck'] },
-  { id: 'neck', x: 50, y: 22, connected: ['lShoulder', 'rShoulder', 'spine'] },
-  { id: 'lShoulder', x: 35, y: 32, connected: ['lElbow'] },
-  { id: 'rShoulder', x: 65, y: 32, connected: ['rElbow'] },
-  { id: 'lElbow', x: 28, y: 47, connected: ['lWrist'] },
-  { id: 'rElbow', x: 72, y: 47, connected: ['rWrist'] },
-  { id: 'lWrist', x: 24, y: 60, connected: [] },
-  { id: 'rWrist', x: 76, y: 60, connected: [] },
-  { id: 'spine', x: 50, y: 42, connected: ['lHip', 'rHip'] },
-  { id: 'lHip', x: 41, y: 58, connected: ['lKnee'] },
-  { id: 'rHip', x: 59, y: 58, connected: ['rKnee'] },
-  { id: 'lKnee', x: 39, y: 73, connected: ['lAnkle'] },
-  { id: 'rKnee', x: 61, y: 73, connected: ['rAnkle'] },
-  { id: 'lAnkle', x: 38, y: 88, connected: [] },
-  { id: 'rAnkle', x: 62, y: 88, connected: [] },
-]
-
-const GOOD_JOINTS = new Set(['head', 'neck', 'lShoulder', 'rShoulder', 'spine', 'lHip', 'rHip', 'lKnee', 'rKnee'])
-const BAD_JOINTS = new Set(['lElbow', 'lAnkle'])
-
-const FEEDBACK_MSGS = [
-  "Hold the position steady",
-  "Bend your knee a little more",
-  "Great angle — keep it up",
-  "Straighten your back slightly",
-  "Perfect form!",
-  "Lower your shoulder",
+const POSE_CONNECTIONS = [
+  [11, 13], [13, 15], [12, 14], [14, 16],
+  [11, 12], [11, 23], [12, 24],
+  [23, 24], [23, 25], [25, 27], [24, 26], [26, 28],
+  [27, 29], [28, 30], [29, 31], [30, 32],
 ]
 
 export default function PatientCameraSession() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [exerciseName, setExerciseName] = useState('Exercise')
+  const [feedback, setFeedback] = useState('Initializing...')
+  const [landmarks, setLandmarks] = useState([])
 
   useEffect(() => {
     let isMounted = true
@@ -62,42 +40,146 @@ export default function PatientCameraSession() {
   }, [id])
 
   const [reps, setReps] = useState(0)
-  const [score, setScore] = useState(72)
+  const [score, setScore] = useState(0)
   const [timer, setTimer] = useState(0)
-  const [feedbackIdx, setFeedbackIdx] = useState(0)
-  const [jitter, setJitter] = useState({})
-  const svgRef = useRef(null)
+  const videoRef = useRef(null)
+  const overlayRef = useRef(null)
+  const captureRef = useRef(null)
+  const wsRef = useRef(null)
+  const sendTimerRef = useRef(null)
+  const sessionIdRef = useRef(`${Date.now()}`)
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setTimer(s => s + 1)
-      if (Math.random() > 0.7) setReps(r => r + 1)
-      setScore(s => Math.max(50, Math.min(99, s + (Math.random() - 0.4) * 4)))
-      setFeedbackIdx(i => (i + 1) % FEEDBACK_MSGS.length)
-
-      // Animate skeleton jitter
-      const j = {}
-      JOINTS.forEach(joint => {
-        j[joint.id] = { dx: (Math.random() - 0.5) * 1.5, dy: (Math.random() - 0.5) * 1.5 }
-      })
-      setJitter(j)
-    }, 1800)
+    const t = setInterval(() => setTimer(s => s + 1), 1000)
     return () => clearInterval(t)
   }, [])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        if (!isMounted) return
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+        }
+      } catch (err) {
+        setFeedback('Camera access denied')
+      }
+    }
+
+    initCamera()
+
+    return () => {
+      isMounted = false
+      const stream = videoRef.current?.srcObject
+      if (stream?.getTracks) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const wsBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+    const wsUrl = `${wsBase}/ws/session/${sessionIdRef.current}?exercise_id=${id}`
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (Array.isArray(data.landmarks)) setLandmarks(data.landmarks)
+        if (typeof data.session_score === 'number') setScore(data.session_score)
+        if (data.rep_counted) setReps(r => r + 1)
+        if (data.feedback) setFeedback(data.feedback)
+      } catch (err) {
+        setFeedback('Tracking error')
+      }
+    }
+
+    ws.onclose = () => {
+      setFeedback('Connection closed')
+    }
+
+    ws.onerror = () => {
+      setFeedback('WebSocket error')
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [id])
+
+  useEffect(() => {
+    const capture = () => {
+      const video = videoRef.current
+      const canvas = captureRef.current
+      const ws = wsRef.current
+
+      if (!video || !canvas || !ws || ws.readyState !== WebSocket.OPEN) return
+      if (video.videoWidth === 0 || video.videoHeight === 0) return
+
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+      }
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+      const base64 = dataUrl.split(',')[1]
+      ws.send(JSON.stringify({ frame: base64 }))
+    }
+
+    sendTimerRef.current = setInterval(capture, 250)
+    return () => clearInterval(sendTimerRef.current)
+  }, [])
+
+  useEffect(() => {
+    const canvas = overlayRef.current
+    const video = videoRef.current
+    if (!canvas || !video) return
+
+    const ctx = canvas.getContext('2d')
+    const width = video.videoWidth || canvas.width
+    const height = video.videoHeight || canvas.height
+
+    canvas.width = width
+    canvas.height = height
+
+    ctx.clearRect(0, 0, width, height)
+
+    if (!landmarks.length) return
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'
+    ctx.lineWidth = 2
+
+    POSE_CONNECTIONS.forEach(([a, b]) => {
+      const p1 = landmarks[a]
+      const p2 = landmarks[b]
+      if (!p1 || !p2) return
+      ctx.beginPath()
+      ctx.moveTo(p1.x * width, p1.y * height)
+      ctx.lineTo(p2.x * width, p2.y * height)
+      ctx.stroke()
+    })
+
+    landmarks.forEach(point => {
+      const x = point.x * width
+      const y = point.y * height
+      ctx.beginPath()
+      ctx.fillStyle = '#34c759'
+      ctx.arc(x, y, 3, 0, Math.PI * 2)
+      ctx.fill()
+    })
+  }, [landmarks])
+
   const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  function getJointPos(joint) {
-    const j = jitter[joint.id] || { dx: 0, dy: 0 }
-    return {
-      cx: `${joint.x + j.dx}%`,
-      cy: `${joint.y + j.dy}%`,
-      x: joint.x + j.dx,
-      y: joint.y + j.dy,
-    }
-  }
-
   function handleStop() {
+    if (wsRef.current) wsRef.current.close()
     navigate('/patient/score', { state: { exerciseId: id, reps, score: Math.round(score), duration: timer } })
   }
 
@@ -108,62 +190,17 @@ export default function PatientCameraSession() {
         background: '#000', overflow: 'hidden',
         fontFamily: '"Inter", sans-serif',
       }}>
-      {/* Simulated camera feed */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(160deg, #0a0a0f 0%, #0d1520 50%, #0a0a0f 100%)',
-      }}>
-        {/* Grid overlay to simulate depth */}
-        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.05 }}>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke="white" strokeWidth="0.5" />
-          ))}
-          {Array.from({ length: 10 }).map((_, i) => (
-            <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="white" strokeWidth="0.5" />
-          ))}
-        </svg>
-      </div>
-
-      {/* Skeleton SVG overlay */}
-      <svg
-        ref={svgRef}
+      <video
+        ref={videoRef}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        playsInline
+        muted
+      />
+      <canvas
+        ref={overlayRef}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {/* Connection lines */}
-        {JOINTS.map(joint => {
-          const pos = getJointPos(joint)
-          return joint.connected.map(targetId => {
-            const target = JOINTS.find(j => j.id === targetId)
-            if (!target) return null
-            const tpos = getJointPos(target)
-            return (
-              <line
-                key={`${joint.id}-${targetId}`}
-                x1={`${pos.x}%`} y1={`${pos.y}%`}
-                x2={`${tpos.x}%`} y2={`${tpos.y}%`}
-                stroke="rgba(255,255,255,0.6)" strokeWidth="0.4"
-                strokeLinecap="round"
-              />
-            )
-          })
-        })}
-
-        {/* Landmark dots */}
-        {JOINTS.map(joint => {
-          const pos = getJointPos(joint)
-          const isGood = GOOD_JOINTS.has(joint.id)
-          const isBad = BAD_JOINTS.has(joint.id)
-          const color = isBad ? '#ff3b30' : isGood ? '#34c759' : '#ff9f0a'
-          return (
-            <g key={joint.id}>
-              <circle cx={`${pos.x}%`} cy={`${pos.y}%`} r="0.8" fill={color} opacity="0.3" />
-              <circle cx={`${pos.x}%`} cy={`${pos.y}%`} r="0.5" fill={color} />
-            </g>
-          )
-        })}
-      </svg>
+      />
+      <canvas ref={captureRef} style={{ display: 'none' }} />
 
       {/* Top bar */}
       <div style={{
@@ -176,7 +213,7 @@ export default function PatientCameraSession() {
           {exerciseName}
         </div>
         <div style={{ fontSize: 17, color: '#fff', fontWeight: 600, textAlign: 'center', flex: 1, padding: '0 16px' }}>
-          {FEEDBACK_MSGS[feedbackIdx]}
+          {feedback}
         </div>
         <div style={{ fontSize: 14, color: '#6e6e73', minWidth: 50, textAlign: 'right' }}>
           {fmt(timer)}

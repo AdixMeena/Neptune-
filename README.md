@@ -28,11 +28,12 @@ A full-stack physiotherapy rehabilitation web app with Doctor Dashboard and Pati
 ### Option 1: Netlify (Recommended — free, ~2 minutes)
 
 1. Go to [netlify.com](https://netlify.com) and sign up / log in
-2. Drag and drop the `dist/` folder onto the Netlify dashboard
+2. Drag and drop `frontend/dist/` onto the Netlify dashboard
 3. Your site is live instantly with a public URL
 
 Or via Netlify CLI:
 ```bash
+cd frontend
 npm install -g netlify-cli
 netlify deploy --prod --dir=dist
 ```
@@ -40,6 +41,7 @@ netlify deploy --prod --dir=dist
 ### Option 2: Vercel (free, ~2 minutes)
 
 ```bash
+cd frontend
 npm install -g vercel
 vercel --prod
 ```
@@ -65,17 +67,18 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm install
-      - run: npm run build
+      - run: cd frontend; npm install
+      - run: cd frontend; npm run build
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./frontend/dist
 ```
 
 ### Option 4: Local development
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
@@ -85,6 +88,7 @@ Open http://localhost:5173
 ### Option 5: Preview the production build locally
 
 ```bash
+cd frontend
 npm install
 npm run build
 npm run preview
