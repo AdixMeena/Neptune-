@@ -1,14 +1,27 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-function HomeIcon() {
+function PatientsIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   )
 }
+
+function AddIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v8" />
+      <path d="M8 12h8" />
+    </svg>
+  )
+}
+
 function UserIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -18,24 +31,13 @@ function UserIcon() {
   )
 }
 
-function DoctorIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2v4" />
-      <path d="M10 4h4" />
-      <circle cx="12" cy="12" r="6" />
-      <path d="M8 20h8" />
-    </svg>
-  )
-}
-
 const tabs = [
-  { label: 'Home', path: '/patient', icon: HomeIcon },
-  { label: 'Doctors', path: '/patient/find-doctor', icon: DoctorIcon },
-  { label: 'Profile', path: '/patient/profile', icon: UserIcon },
+  { label: 'Patients', path: '/doctor', icon: PatientsIcon },
+  { label: 'Add', path: '/doctor/add-patient', icon: AddIcon },
+  { label: 'Profile', path: '/doctor/profile', icon: UserIcon },
 ]
 
-export default function PatientBottomNav() {
+export default function DoctorBottomNav() {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -47,7 +49,7 @@ export default function PatientBottomNav() {
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       {tabs.map(tab => {
-        const isActive = location.pathname === tab.path || (tab.path !== '/patient' && location.pathname.startsWith(tab.path))
+        const isActive = location.pathname === tab.path || (tab.path !== '/doctor' && location.pathname.startsWith(tab.path))
         const Icon = tab.icon
         return (
           <button key={tab.label} onClick={() => navigate(tab.path)} style={{

@@ -79,7 +79,7 @@ export default function PatientExerciseDetail() {
         <p style={{ fontSize: 17, color: '#6e6e73', marginTop: 8 }}>{exercise.duration} · {exercise.difficulty}</p>
       </div>
 
-      <div style={{ padding: '24px' }}>
+      <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Video placeholder */}
         <div style={{
           width: '100%', aspectRatio: '16/9',
@@ -122,7 +122,7 @@ export default function PatientExerciseDetail() {
 
         {/* Instructions */}
         <section style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 600, color: '#1d1d1f', marginBottom: 12 }}>Instructions</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', marginBottom: 12 }}>Instructions</h2>
           <p style={{ fontSize: 17, color: '#1d1d1f', lineHeight: 1.47, letterSpacing: '-0.374px' }}>
             {exercise.instructions}
           </p>
@@ -130,7 +130,7 @@ export default function PatientExerciseDetail() {
 
         {/* Target joints */}
         <section style={{ marginBottom: 28 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 600, color: '#1d1d1f', marginBottom: 12 }}>Joints tracked</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', marginBottom: 12 }}>Joints tracked</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {exercise.joints.map((joint, i) => (
               <div key={joint} style={{

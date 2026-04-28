@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DoctorHeader from '../../components/DoctorHeader.jsx'
+import DoctorBottomNav from '../../components/DoctorBottomNav.jsx'
 import { Card, BtnPrimary, BtnOutline } from '../../components/UI.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { AuthContext } from '../../App.jsx'
@@ -48,10 +49,26 @@ export default function DoctorAssignExercise() {
         return
       }
 
+      const { data: profileRow, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (profileError) {
+        if (isMounted) {
+          setError(profileError.message)
+          setLoading(false)
+        }
+        return
+      }
+
       const { data: patientRow, error: patientError } = await supabase
         .from('patients')
         .select('*')
         .eq('user_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (patientError) {
@@ -60,6 +77,34 @@ export default function DoctorAssignExercise() {
           setLoading(false)
         }
         return
+      }
+
+      let ensuredPatient = patientRow
+      if (!patientRow) {
+        const { data: createdRow, error: createError } = await supabase
+          .from('patients')
+          .insert({
+            user_id: id,
+            doctor_id: user.id,
+            name: profileRow?.name || 'New patient',
+            condition: 'Recovery plan',
+            age: null,
+            score: 0,
+            streak: 0,
+            progress: [],
+          })
+          .select('*')
+          .maybeSingle()
+
+        if (createError) {
+          if (isMounted) {
+            setError(createError.message)
+            setLoading(false)
+          }
+          return
+        }
+
+        ensuredPatient = createdRow
       }
 
       const { data: exerciseRows, error: exerciseError } = await supabase
@@ -76,7 +121,7 @@ export default function DoctorAssignExercise() {
       }
 
       if (isMounted) {
-        setPatient(patientRow)
+        setPatient(ensuredPatient)
         setExercises(exerciseRows || [])
         setLoading(false)
       }
@@ -124,7 +169,7 @@ export default function DoctorAssignExercise() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f7' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f5f7', paddingBottom: 88 }}>
       <DoctorHeader />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 48px' }}>
         {error && (
@@ -240,6 +285,7 @@ export default function DoctorAssignExercise() {
           )}
         </div>
       </main>
+      <DoctorBottomNav />
     </div>
   )
 }

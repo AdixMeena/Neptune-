@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoctorHeader from '../../components/DoctorHeader.jsx'
+import DoctorBottomNav from '../../components/DoctorBottomNav.jsx'
 import { Card, ScoreBadge } from '../../components/UI.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { AuthContext } from '../../App.jsx'
@@ -175,7 +176,7 @@ export default function DoctorDashboard() {
   const sessionToday = 3
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f7' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f5f7', paddingBottom: 88 }}>
       <DoctorHeader />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 48px', minHeight: '100vh' }}>
         {/* Header */}
@@ -284,6 +285,7 @@ export default function DoctorDashboard() {
           ))}
         </div>
       </main>
+      <DoctorBottomNav />
     </div>
   )
 }

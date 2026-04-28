@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoctorHeader from '../../components/DoctorHeader.jsx'
+import DoctorBottomNav from '../../components/DoctorBottomNav.jsx'
 import { Card, BtnPrimary, BtnOutline, Input } from '../../components/UI.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { AuthContext } from '../../App.jsx'
@@ -150,7 +151,7 @@ export default function DoctorAddPatient() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f7' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f5f7', paddingBottom: 88 }}>
       <DoctorHeader />
       <main style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 48px' }}>
         <button onClick={() => navigate('/doctor')} style={{
@@ -244,6 +245,7 @@ export default function DoctorAddPatient() {
           )}
         </Card>
       </main>
+      <DoctorBottomNav />
     </div>
   )
 }

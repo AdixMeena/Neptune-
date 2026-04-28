@@ -121,7 +121,7 @@ export default function PatientFindDoctor() {
         </p>
       </div>
 
-      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {error && (
           <div style={{
             background: '#ff3b3010', border: '1px solid #ff3b3030',

@@ -62,7 +62,7 @@ export default function PatientFeedback() {
           <p style={{ fontSize: 17, color: '#6e6e73', marginTop: 6 }}>Messages from your physiotherapist</p>
         </div>
 
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: '32px 24px', maxWidth: 1200, margin: '0 auto' }}>
           {error && (
             <div style={{
               background: '#ff3b3010', border: '1px solid #ff3b3030',

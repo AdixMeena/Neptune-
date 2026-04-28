@@ -29,6 +29,8 @@ export default function PatientDashboard() {
         .from('patients')
         .select('*')
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (patientError) {
@@ -82,31 +84,56 @@ export default function PatientDashboard() {
     <PatientApprovalGate showNav>
       <div style={{ background: '#f5f5f7', minHeight: '100vh', paddingBottom: 80, fontFamily: '"Inter", sans-serif' }}>
         {/* Header */}
-        <div style={{ background: '#000', padding: '48px 24px 28px' }}>
-          <div style={{ fontSize: 12, color: '#6e6e73', marginBottom: 4 }}>Good morning,</div>
-          <h1 style={{ fontSize: 32, fontWeight: 600, color: '#fff', fontFamily: '"Inter Tight", sans-serif', margin: 0, lineHeight: 1.09 }}>
-            {patient?.name || 'Your profile'}
-          </h1>
-          <p style={{ fontSize: 14, color: '#6e6e73', marginTop: 6 }}>{patient?.condition || 'Recovery plan'}</p>
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 20,
+          background: '#ffffff', borderBottom: '1px solid #e5e5ea',
+        }}>
+          <div style={{
+            maxWidth: 1200, margin: '0 auto',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 24px',
+          }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#6e6e73', marginBottom: 4 }}>Good morning,</div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', fontFamily: '"Inter Tight", sans-serif' }}>
+                {patient?.name || 'Your profile'}
+              </div>
+              <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 2 }}>{patient?.condition || 'Recovery plan'}</div>
+            </div>
 
-          {/* Score + streak row */}
-          <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <ScoreBadge score={patient?.score ?? 0} size={48} />
-              <div>
-                <div style={{ fontSize: 12, color: '#6e6e73' }}>Overall score</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
-                  {(patient?.score ?? 0) >= 75 ? 'Great progress' : (patient?.score ?? 0) >= 50 ? 'Keep going' : 'Needs work'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ScoreBadge score={patient?.score ?? 0} size={40} />
+                <div>
+                  <div style={{ fontSize: 12, color: '#6e6e73' }}>Overall score</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>
+                    {(patient?.score ?? 0) >= 75 ? 'Great progress' : (patient?.score ?? 0) >= 50 ? 'Keep going' : 'Needs work'}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={{ width: 1, background: '#2a2a2a' }} />
-            <div>
-              <div style={{ fontSize: 12, color: '#6e6e73' }}>Streak</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#34c759' }}>{patient?.streak ?? 0} days 🔥</div>
+              <div style={{ width: 1, height: 34, background: '#e5e5ea' }} />
+              <div>
+                <div style={{ fontSize: 12, color: '#6e6e73' }}>Streak</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#34c759' }}>{patient?.streak ?? 0} days 🔥</div>
+              </div>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut()
+                  navigate('/login')
+                }}
+                style={{
+                  fontSize: 12, color: '#6e6e73',
+                  background: 'none', border: '1px solid #d2d2d7',
+                  borderRadius: 10, padding: '6px 10px', cursor: 'pointer',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#ff3b30'}
+                onMouseLeave={e => e.currentTarget.style.color = '#6e6e73'}
+              >
+                Log out
+              </button>
             </div>
           </div>
-        </div>
+        </header>
 
         <div style={{ padding: '24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {error && (

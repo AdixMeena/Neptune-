@@ -103,8 +103,17 @@ export default function DoctorSidebar() {
 
       {/* Doctor info + sign out */}
       <div style={{ padding: '20px 24px', borderTop: '1px solid #2a2a2a' }}>
-        <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{doctorName}</div>
-        <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 2 }}>{specialization}</div>
+        <button
+          type="button"
+          onClick={() => navigate('/doctor/profile')}
+          style={{
+            display: 'block', width: '100%', textAlign: 'left',
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{doctorName}</div>
+          <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 2 }}>{specialization}</div>
+        </button>
         <button
           onClick={handleSignOut}
           style={{
